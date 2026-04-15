@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Control de Activos - Vele Provincial+ v2.0</title>
+  <link rel="stylesheet" href="/css/vuetify.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@latest/css/materialdesignicons.min.css" />
+<style>
+    /* Estilos personalizados para mejorar la UI profesional */
+    .v-main { background-color: #f4f7f9; }
+    .font-weight-black { font-weight: 900 !important; }
+    .rounded-xl { border-radius: 16px !important; }
+    .tarjeta-estadistica { transition: transform 0.2s; border: 1px solid #e0e0e0 !important; }
+    .tarjeta-estadistica:hover { transform: translateY(-4px); box-shadow: 0 4px 20px rgba(0,0,0,0.05) !important; }
+    [v-cloak] { display: none; } /* Evita parpadeo de Vue al cargar */
+  </style>
+</head>
+<body>
+  <div id="app" v-cloak>
+    <v-app>
+
+<v-app-bar color="white" elevation="1" border="b">
+        <v-app-bar-nav-icon color="primary"></v-app-bar-nav-icon>
+        <v-toolbar-title class="font-weight-black text-primary">Control de activos</v-toolbar-title>
+        <v-spacer></v-spacer>
+        
+        <v-menu min-width="200px" rounded="lg">
+          <template v-slot:activator="{ props }">
+            <v-btn icon v-bind="props" class="mr-4">
+              <v-avatar color="primary" size="38">
+                <v-img src="https://randomuser.me/api/portraits/men/85.jpg"></v-img>
+              </v-avatar>
+            </v-btn>
+          </template>
+          <v-card class="mt-2 pa-4" border flat>
+            <div class="text-center">
+              <v-avatar color="primary" class="mb-2"><v-img src="https://randomuser.me/api/portraits/men/85.jpg"></v-img></v-avatar>
+              <h3 class="text-subtitle-1 font-weight-bold">Administrador</h3>
+              <v-divider class="my-3"></v-divider>
+              <v-btn variant="tonal" block prepend-icon="mdi-logout" color="red" @click="cerrarSesion">Cerrar Sesión</v-btn>
+            </div>
+          </v-card>
+        </v-menu>
+      </v-app-bar>
+
+      <v-navigation-drawer permanent border="r" width="260">
+        <v-list nav density="compact" class="mt-4">
+          <v-list-subheader class="font-weight-black text-grey text-caption">SISTEMA</v-list-subheader>
+          <v-list-item prepend-icon="mdi-view-dashboard" title="Dashboard" active color="primary" rounded="lg"></v-list-item>
+          <v-list-item prepend-icon="mdi-archive-outline" title="Inventario" rounded="lg"></v-list-item>
+        </v-list>
+
+        <template v-slot:append>
+          <v-divider></v-divider>
+          <v-list nav>
+            <v-list-item prepend-icon="mdi-cog" title="Configuración" rounded="lg" class="mb-2"></v-list-item>
+          </v-list>
+        </template>
+      </v-navigation-drawer>
+
+      <v-main>
+          <v-row class="mb-6">
+            <v-col v-for="s in estadisticas" :key="s.title" cols="12" sm="6" md="3">
+              <v-card flat class="rounded-xl pa-5 tarjeta-estadistica">
+                <div class="d-flex justify-space-between align-start">
+                  <div>
+                    <div class="text-caption text-grey font-weight-bold mb-1">{{ s.title }}</div>
+                    <div class="text-h4 font-weight-black">{{ s.valor }}</div>
+                  </div>
+                  <v-icon :color="s.color" size="36" class="opacity-80">{{ s.icon }}</v-icon>
+                </div>
+              </v-card>
+            </v-col>
+          </v-row>
+
+    
+
+
+<!-- //Comentario -->
+     <v-card flat border class="rounded-xl">
+            <v-data-table :headers="columnasTabla" :items="listaActivos" :search="terminoBusqueda" :loading="estaCargando" class="pa-4" hover>
+              
+              <template v-slot:top>
+                <v-toolbar flat color="transparent" height="70">
+                  <v-toolbar-title class="font-weight-black">Control de Inventario</v-toolbar-title>
+                  <v-spacer></v-spacer>
+                  <v-text-field v-model="terminoBusqueda" prepend-inner-icon="mdi-magnify" placeholder="Buscar placa o marca..." variant="solo-filled" flat hide-details density="compact" style="max-width: 300px;" class="rounded-lg mr-4"></v-text-field>
+                  <v-btn color="primary" variant="flat" prepend-icon="mdi-plus" class="rounded-lg font-weight-bold" @click="abrirDialogoNuevo">Nuevo</v-btn>
+                </v-toolbar>
+              </template>  
+
+              <template v-slot:item.condicion="{ value }">
+                <v-chip
+                  :color="pintarColorEstado(value)"
+                  size="small"
+                  label
+                  class="font-weight-bold"
+                >
+                  {{ value }}  </v-chip>
+              </template>
+              <template v-slot:item.numPlaca="{ value }">
+                <v-chip
+                  :color="pintarColorPlaca(value)"
+                  :text="value"
+                  size="small"
+                  label
+                ></v-chip>
+              </template>
+
+         
+              <template v-slot:item.acciones="{ item }">
+                <v-btn icon="mdi-pencil-outline" size="x-small" variant="text" color="blue" @click="abrirDialogoEdicion(item)"></v-btn>
+                <v-btn icon="mdi-trash-can-outline" size="x-small" variant="text" color="red" @click="eliminarActivo(item.id)"></v-btn>
+              </template>
+            </v-data-table>
+          </v-card>
+
+    <v-dialog v-model="mostrarDialogo" max-width="950">
+        <v-card rounded="xl" class="pa-4">
+          <v-toolbar color="primary" rounded="t-xl" density="compact">
+            <v-toolbar-title class="text-white font-weight-bold ml-4">
+              {{ esModoEdicion ? 'Editar Activo' : 'Nuevo Activo' }}
+            </v-toolbar-title>
+          </v-toolbar>
+
+          <v-card-text class="mt-4">
+            <v-row dense>
+              <v-col cols="12" md="4">
+                <v-text-field v-model="modeloFormulario.numPlaca" label="Placa (ID)" variant="outlined" prepend-inner-icon="mdi-tag-outline" :disabled="esModoEdicion"></v-text-field>
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field v-model="modeloFormulario.codBien" label="Cód. Bien" variant="outlined"></v-text-field>
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field v-model="modeloFormulario.numSerie" label="N° Serie" variant="outlined"></v-text-field>
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-text-field v-model="modeloFormulario.marca" label="Marca" variant="outlined"></v-text-field>
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field v-model="modeloFormulario.modelo" label="Modelo" variant="outlined"></v-text-field>
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select v-model="modeloFormulario.condicion" :items="['EN USO', 'REPARACION', 'RETIRADO']" label="Estado" variant="outlined"></v-select>
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-text-field v-model="modeloFormulario.unidadEjecutora" label="Unidad Ejecutora" variant="outlined" hint="Ej: 2235-TI" persistent-hint></v-text-field>
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field v-model="modeloFormulario.fechaIngresoInv" label="Ingreso Inventario" type="date" variant="outlined" prepend-inner-icon="mdi-calendar"></v-text-field>
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field v-model="modeloFormulario.fechaIngresoUnidad" label="Ingreso Unidad" type="date" variant="outlined" prepend-inner-icon="mdi-calendar"></v-text-field>
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <v-text-field v-model="modeloFormulario.garantiaInicio" label="Garantía Inicio" type="date" variant="outlined" prepend-inner-icon="mdi-calendar"></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field v-model="modeloFormulario.garantiaFin" label="Garantía Fin" type="date" variant="outlined" prepend-inner-icon="mdi-calendar"></v-text-field>
+              </v-col>
+
+              <v-col cols="12">
+                <v-textarea v-model="modeloFormulario.descripcion" label="Descripción" variant="outlined" rows="3"></v-textarea>
+              </v-col>
+            </v-row>
+          </v-card-text>
+
+          <v-card-actions class="px-6 pb-6">
+            <v-spacer></v-spacer>
+            <v-btn variant="text" color="grey-darken-1" @click="mostrarDialogo = false" class="text-none">CANCELAR</v-btn>
+            <v-btn color="primary" variant="flat" @click="guardarActivo" class="px-8 text-none font-weight-bold">GUARDAR</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      </v-main>
+    </v-app>
+  </div>
+
+  <script src="js/vue.global.prod.js"></script>
+  <script src="js/vuetify.min.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
